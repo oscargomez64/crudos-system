@@ -3,6 +3,12 @@ const cors = require('cors');
 require('dotenv').config();
 
 const clienteRoutes = require('./routes/cliente.routes');
+const cervezaRoutes = require('./routes/cerveza.routes');
+const proveedorRoutes = require('./routes/proveedor.routes');
+const ingredienteRoutes = require('./routes/ingrediente.routes');
+const pedidoRoutes = require('./routes/pedido.routes');
+const pedidoCervezaRoutes = require('./routes/pedido-cerveza.routes');
+const cervezaIngredienteRoutes = require('./routes/cerveza-ingrediente.routes');
 const pool = require('./db/connect');
 
 const app = express();
@@ -17,6 +23,12 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/cliente', clienteRoutes);
+app.use('/api/cerveza', cervezaRoutes);
+app.use('/api/proveedor', proveedorRoutes);
+app.use('/api/ingrediente', ingredienteRoutes);
+app.use('/api/pedido', pedidoRoutes);
+app.use('/api/pedido_cerveza', pedidoCervezaRoutes);
+app.use('/api/cerveza_ingrediente', cervezaIngredienteRoutes);
 
 async function testConnection() {
   try {

@@ -10,7 +10,7 @@ async function getCerveza() {
 }
 
 // Consultar cerveza por id
-async function getCervezaById() {
+async function getCervezaById(id) {
   const [rows] = await pool.query(
     'SELECT * FROM Cerveza WHERE IdCerveza = ?',
     [id]
@@ -20,7 +20,7 @@ async function getCervezaById() {
 }
 
 // Crear cerveza
-async function crearCerveza(id, nombre, estilo, grado, precio) {
+async function createCerveza(id, nombre, estilo, grado, precio) {
   const [result] = await pool.query(
     'INSERT INTO Cerveza (IdCerveza, Nombre, Estilo, GradoAlcohol, PrecioLitro)' +
     ' VALUES (?, ?, ?, ?, ?)',
@@ -30,4 +30,34 @@ async function crearCerveza(id, nombre, estilo, grado, precio) {
   return result.insertId;
 }
 
-module.exports = { crearCerveza };
+// Actualizar cerveza
+async function updateCerveza(id, atributosActualizar) {
+  const atributos = Object.keys(atributosActualizar);
+  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
+  const valores = atributos.map(campo => atributosActualizar[campo]);
+
+  const consulta = `UPDATE Cerveza SET ${clausula} WHERE IdCerveza = ?`;
+  valores.push(id);
+
+  const [result] = await pool.query(consulta, valores);
+
+  return result.affectedRows;
+}
+
+// Eliminar cerveza
+async function deleteCerveza(id) {
+  const [result] = await pool.query(
+    'DELETE FROM Cerveza WHERE IdCerveza = ?',
+    [id]
+  );
+
+  return result.affectedRows;
+}
+
+module.exports = {
+  getCerveza,
+  getCervezaById,
+  createCerveza,
+  updateCerveza,
+  deleteCerveza
+};

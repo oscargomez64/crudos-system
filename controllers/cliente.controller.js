@@ -58,14 +58,14 @@ const createCliente = async (req, res) => {
     const insertId = await ClienteModel.createCliente(id, nombre, rfc, ciudad, tipo);
     res.status(201).json({
       success: true,
-      message: 'Se agregó el usuario',
+      message: 'Se agregó el cliente',
       insertId
     });
   } catch (error) {
-    console.error('Error al añadir usuario: ', error);
+    console.error('Error al añadir cliente: ', error);
     res.status(500).json({
       success: false,
-      message: 'Error al añadir usuario'
+      message: 'Error al añadir cliente'
     });
   }
 };
