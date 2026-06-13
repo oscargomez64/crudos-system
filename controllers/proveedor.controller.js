@@ -43,6 +43,45 @@ const getProveedorById = async (req, res) => {
   }
 }
 
+// GET /api/proveedor/project
+const getProveedoresProyeccion = async (req, res) => {
+  try {
+    const { campos, ciudad } = req.query;
+
+    if (!campos) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere de al menos un campo a proyectar'
+      });
+    }
+
+    const camposPermitidos = ['idProveedor', 'nombre', 'telefono', 'ciudad'];
+    const camposConsultados = campos.split(',').map(f => f.trim());
+
+    // Validar si existe dicho campo
+    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
+    if (camposNoValidos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+      });
+    }
+
+    const result = await ProveedorModel.getProveedoresProyeccion(camposConsultados, ciudad);
+
+    res.status(200).json({
+      success: true,
+      datos: result
+    });
+  } catch (error) {
+    console.error('Error al obtener proveedores: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener proveedores'
+    });
+  }
+};
+
 // POST /api/proveedor
 const createProveedor = async (req, res) => {
   try {
@@ -158,6 +197,7 @@ const deleteProveedor = async (req, res) => {
 module.exports = {
   getProveedores,
   getProveedorById,
+  getProveedoresProyeccion,
   createProveedor,
   updateProveedor,
   deleteProveedor

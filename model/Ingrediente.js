@@ -19,6 +19,28 @@ async function getIngredienteById(id) {
   return rows[0];
 }
 
+// Proyectar campos ingrediente
+async function getIngredienteProyeccion(campos, filtros = {}) {
+  const clausula = campos.join(', ');
+
+  let consulta = `SELECT ${clausula} FROM Ingrediente WHERE 1=1`;
+  const params = [];
+
+  if (filtros.stockMin !== undefined) {
+    consulta += ` AND StockActual >= ?`;
+    params.push(filtros.stockMin);
+  }
+
+  if (filtros.stockMax !== undefined) {
+    consulta += ` AND StockActual <= ?`;
+    params.push(filtros.stockMax);
+  }
+
+
+  const [result] = await pool.query(consulta, params);
+  return result;
+}
+
 // Crear ingrediente
 async function createIngrediente(idIngrediente, nombre, unidad, stock, idProveedor) {
   const [result] = await pool.query(
@@ -57,6 +79,7 @@ async function deleteIngrediente(id) {
 module.exports = {
   getIngredientes,
   getIngredienteById,
+  getIngredienteProyeccion,
   createIngrediente,
   updateIngrediente,
   deleteIngrediente

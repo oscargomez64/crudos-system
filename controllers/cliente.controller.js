@@ -43,6 +43,54 @@ const getClienteById = async (req, res) => {
   }
 }
 
+// GET /api/cliente/project
+const getClientesProyeccion = async (req, res) => {
+  try {
+    const { campos, tipoCliente } = req.query;
+
+    if (!campos) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere de al menos un campo a proyectar'
+      });
+    }
+
+    const camposPermitidos = ['idCliente', 'nombre', 'rfc', 'ciudad', 'tipoCliente'];
+    const camposConsultados = campos.split(',').map(f => f.trim());
+
+    // Validar si existe dicho campo
+    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
+    if (camposNoValidos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+      });
+    }
+
+    const tiposValidos = ['Mayorista', 'Minorista'];
+
+    if (tipoCliente && !tiposValidos.includes(tipoCliente)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cliente debe ser tipo Mayorista O Minorista'
+      });
+    }
+
+    const result = await ClienteModel.getClientesProyeccion(camposConsultados, tipoCliente);
+
+    res.status(200).json({
+      success: true,
+      datos: result
+    });
+  } catch (error) {
+    console.error('Error al obtener clientes: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener clientes'
+    });
+  }
+};
+
 // POST /api/cliente
 const createCliente = async (req, res) => {
   try {
@@ -168,6 +216,7 @@ const deleteCliente = async (req, res) => {
 module.exports = {
   getClientes,
   getClienteById,
+  getClientesProyeccion,
   createCliente,
   updateCliente,
   deleteCliente

@@ -43,12 +43,60 @@ const getIngredienteById = async (req, res) => {
   }
 }
 
+// GET /api/ingrediente/project
+const getIngredienteProyeccion = async (req, res) => {
+  try {
+    const { campos, stockMin, stockMax } = req.query;
+
+    if (!campos) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere de al menos un campo a proyectar'
+      });
+    }
+
+    const camposPermitidos = ['idIngrediente', 'nombre', 'unidadMedida', 'stockActual', 'IdProveedor'];
+    const camposConsultados = campos.split(',').map(f => f.trim());
+
+    // Validar si existe dicho campo
+    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
+    if (camposNoValidos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+      });
+    }
+
+    if (stockMin && stockMax && stockMin > stockMax) {
+      return res.status(400).json({
+        success: false,
+        message: 'stockMin no puede ser mayor que stockMax'
+      });
+    }
+
+    const result = await IngredienteModel.getIngredienteProyeccion(
+      camposConsultados, { stockMin, stockMax }
+    );
+
+    res.status(200).json({
+      success: true,
+      datos: result
+    });
+  } catch (error) {
+    console.error('Error al obtener ingredientes: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener ingredientes'
+    });
+  }
+};
+
 // POST /api/ingrediente
 const createIngrediente = async (req, res) => {
   try {
     const { idIngrediente, nombre, unidad, stock, idProveedor } = req.body;
 
-    if (!id || !nombre || !telefono || !ciudad) {
+    if (!idIngrediente || !nombre || !unidad || !stock || !idProveedor) {
       return res.status(400).json({
         success: false,
         message: 'Faltan datos obligatorios'
@@ -165,6 +213,7 @@ const deleteIngrediente = async (req, res) => {
 module.exports = {
   getIngredientes,
   getIngredienteById,
+  getIngredienteProyeccion,
   createIngrediente,
   updateIngrediente,
   deleteIngrediente

@@ -19,6 +19,22 @@ async function getClienteById(id) {
   return rows[0];
 }
 
+// Proyectar campos cliente
+async function getClientesProyeccion(campos, tipo) {
+  const clausula = campos.join(', ');
+
+  let consulta = `SELECT ${clausula} FROM Cliente`;
+  const params = [];
+
+  if (tipo) {
+    consulta += ` WHERE TipoCliente = ?`;
+    params.push(tipo);
+  }
+
+  const [result] = await pool.query(consulta, params);
+  return result;
+}
+
 // Crear cliente
 async function createCliente(id, nombre, rfc, ciudad, tipo) {
   const [result] = await pool.query(
@@ -57,6 +73,7 @@ async function deleteCliente(id) {
 module.exports = {
   getClientes,
   getClienteById,
+  getClientesProyeccion,
   createCliente,
   updateCliente,
   deleteCliente

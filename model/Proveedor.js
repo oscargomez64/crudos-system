@@ -19,6 +19,22 @@ async function getProveedorById(id) {
   return rows[0];
 }
 
+// Proyectar campos proveedor
+async function getProveedoresProyeccion(campos, ciudad) {
+  const clausula = campos.join(', ');
+
+  let consulta = `SELECT ${clausula} FROM Proveedor`;
+  const params = [];
+
+  if (ciudad) {
+    consulta += ` WHERE Ciudad = ?`;
+    params.push(ciudad);
+  }
+
+  const [result] = await pool.query(consulta, params);
+  return result;
+}
+
 // Crear proveedor
 async function createProveedor(id, nombre, telefono, ciudad) {
   const [result] = await pool.query(
@@ -57,6 +73,7 @@ async function deleteProveedor(id) {
 module.exports = {
   getProveedores,
   getProveedorById,
+  getProveedoresProyeccion,
   createProveedor,
   updateProveedor,
   deleteProveedor

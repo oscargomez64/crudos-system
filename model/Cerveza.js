@@ -19,6 +19,28 @@ async function getCervezaById(id) {
   return rows[0];
 }
 
+// Proyectar campos cerveza
+async function getCervezaProyeccion(campos, filtros = {}) {
+  const clausula = campos.join(', ');
+
+  let consulta = `SELECT ${clausula} FROM Cerveza WHERE 1=1`;
+  const params = [];
+
+  if (filtros.gradoMin !== undefined) {
+    consulta += ` AND GradoAlcohol >= ?`;
+    params.push(filtros.gradoMin);
+  }
+
+  if (filtros.gradoMax !== undefined) {
+    consulta += ` AND GradoAlcohol <= ?`;
+    params.push(filtros.gradoMax);
+  }
+
+
+  const [result] = await pool.query(consulta, params);
+  return result;
+}
+
 // Crear cerveza
 async function createCerveza(id, nombre, estilo, grado, precio) {
   const [result] = await pool.query(
@@ -57,6 +79,7 @@ async function deleteCerveza(id) {
 module.exports = {
   getCerveza,
   getCervezaById,
+  getCervezaProyeccion,
   createCerveza,
   updateCerveza,
   deleteCerveza

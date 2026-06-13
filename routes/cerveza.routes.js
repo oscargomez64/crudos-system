@@ -3,12 +3,14 @@ const router = express.Router();
 const {
   getCerveza,
   getCervezaById,
+  getCervezaProyeccion,
   createCerveza,
   updateCerveza,
   deleteCerveza
 } = require('../controllers/cerveza.controller');
 
 router.get('/', getCerveza);
+router.get('/project', getCervezaProyeccion);
 router.get('/:id', getCervezaById);
 
 router.post('/', createCerveza);

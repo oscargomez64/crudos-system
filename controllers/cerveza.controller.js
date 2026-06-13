@@ -43,6 +43,54 @@ const getCervezaById = async (req, res) => {
   }
 }
 
+// GET /api/cerveza/project
+const getCervezaProyeccion = async (req, res) => {
+  try {
+    const { campos, gradoMin, gradoMax } = req.query;
+
+    if (!campos) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere de al menos un campo a proyectar'
+      });
+    }
+
+    const camposPermitidos = ['idCerveza', 'nombre', 'estilo', 'gradoAlcohol', 'precioLitro'];
+    const camposConsultados = campos.split(',').map(f => f.trim());
+
+    // Validar si existe dicho campo
+    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
+    if (camposNoValidos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+      });
+    }
+
+    if (gradoMin && gradoMax && gradoMin > gradoMax) {
+      return res.status(400).json({
+        success: false,
+        message: 'gradoMin no puede ser mayor que gradoMax'
+      });
+    }
+
+    const result = await CervezaModel.getCervezaProyeccion(
+      camposConsultados, { gradoMin, gradoMax }
+    );
+
+    res.status(200).json({
+      success: true,
+      datos: result
+    });
+  } catch (error) {
+    console.error('Error al obtener cervezas: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener cervezas'
+    });
+  }
+};
+
 // POST /api/cerveza
 const createCerveza = async (req, res) => {
   try {
@@ -161,6 +209,7 @@ const deleteCerveza = async (req, res) => {
 module.exports = {
   getCerveza,
   getCervezaById,
+  getCervezaProyeccion,
   createCerveza,
   updateCerveza,
   deleteCerveza
