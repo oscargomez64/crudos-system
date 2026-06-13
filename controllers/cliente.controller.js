@@ -1,6 +1,6 @@
 const ClienteModel = require('../model/Cliente');
 
-// GET /api/clientes
+// GET /api/cliente
 const getClientes = async (req, res) => {
   try {
     const clientes = await ClienteModel.getClientes();
@@ -17,7 +17,7 @@ const getClientes = async (req, res) => {
   }
 }
 
-// GET /api/clientes/:id
+// GET /api/cliente/:id
 const getClienteById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -43,7 +43,132 @@ const getClienteById = async (req, res) => {
   }
 }
 
+// POST /api/cliente
+const createCliente = async (req, res) => {
+  try {
+    const { id, nombre, rfc, ciudad, tipo } = req.body;
+
+    if (!id || !nombre || !rfc || !ciudad || !tipo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan datos obligatorios'
+      });
+    }
+
+    const insertId = await ClienteModel.createCliente(id, nombre, rfc, ciudad, tipo);
+    res.status(201).json({
+      success: true,
+      message: 'Se agregó el usuario',
+      insertId
+    });
+  } catch (error) {
+    console.error('Error al añadir usuario: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al añadir usuario'
+    });
+  }
+};
+
+// PUT /api/cliente/:id
+const updateCliente = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, rfc, ciudad, tipoCliente } = req.body;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID no válido'
+      });
+    }
+
+    const atributos = {};
+
+    if (nombre !== undefined) {
+      if (typeof nombre != 'string' || nombre.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'El nombre debe ser una cadena válida'
+        });
+      }
+      atributos.nombre = nombre;
+    }
+
+    if (rfc !== undefined) {
+      if (!/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(rfc)) {
+        return res.status(400).json({
+          success: false,
+          message: 'RFC inválido'
+        });
+      }
+      atributos.rfc = rfc;
+    }
+
+    if (ciudad !== undefined)
+      atributos.ciudad = ciudad;
+
+    if (tipoCliente !== undefined)
+      atributos.tipoCliente = tipoCliente;
+
+    if (Object.keys(atributos).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay campos a actualizar'
+      });
+    }
+
+    const filas = await ClienteModel.updateCliente(id, atributos);
+    if (filas === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cliente no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Cliente actualizado'
+    });
+  } catch (error) {
+    console.error('Error al actualizar datos del cliente: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar datos del cliente'
+    });
+  }
+}
+
+// DELETE /api/cliente/:id
+const deleteCliente = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const filas = await ClienteModel.deleteCliente(id);
+
+    if (filas === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cliente no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Cliente eliminado'
+    });
+  } catch (error) {
+    console.error('Error al eliminar cliente: ', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar cliente'
+    });
+  }
+}
+
 module.exports = {
   getClientes,
-  getClienteById
-}
+  getClienteById,
+  createCliente,
+  updateCliente,
+  deleteCliente
+};

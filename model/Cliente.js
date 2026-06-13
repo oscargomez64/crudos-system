@@ -10,7 +10,7 @@ async function getClientes() {
 }
 
 // Consultar cliente por id
-async function getClienteById() {
+async function getClienteById(id) {
   const [rows] = await pool.query(
     'SELECT * FROM Cliente WHERE IdCliente = ?',
     [id]
@@ -20,7 +20,7 @@ async function getClienteById() {
 }
 
 // Crear cliente
-async function crearCliente(id, nombre, rfc, ciudad, tipo) {
+async function createCliente(id, nombre, rfc, ciudad, tipo) {
   const [result] = await pool.query(
     'INSERT INTO Cliente (IdCliente, Nombre, RFC, Ciudad, TipoCliente) VALUES ' +
     '(?, ?, ?, ?, ?)',
@@ -31,11 +31,15 @@ async function crearCliente(id, nombre, rfc, ciudad, tipo) {
 }
 
 // Actualizar cliente existente
-async function updateCliente(id, nombre, rfc, ciudad, tipo) {
-  const [result] = await pool.query(
-    'UPDATE Cliente SET nombre = ?, rfc = ?, ciudad = ?, tipo = ? WHERE IdCliente = ?',
-    [nombre, rfc, ciudad, tipo, id]
-  );
+async function updateCliente(id, atributosActualizar) {
+  const atributos = Object.keys(atributosActualizar);
+  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
+  const valores = atributos.map(campo => atributosActualizar[campo]);
+
+  const consulta = `UPDATE Cliente SET ${clausula} WHERE IdCliente = ?`;
+  valores.push(id);
+
+  const [result] = await pool.query(consulta, valores);
 
   return result.affectedRows;
 }
@@ -53,7 +57,7 @@ async function deleteCliente(id) {
 module.exports = {
   getClientes,
   getClienteById,
-  crearCliente,
+  createCliente,
   updateCliente,
   deleteCliente
 };
