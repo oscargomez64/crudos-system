@@ -1,15 +1,26 @@
 const pool = require('../db/connect');
 
-// Consultar todos los pedidos de cervezas
-async function getPedidoCerveza() {
-  const [rows] = await pool.query(
-    'SELECT * FROM Pedido_Cerveza'
-  );
+const UPDATE_FIELDS = new Set(['CantidadLitros', 'PrecioUnitarioAplicado']);
 
+function buildUpdateClause(atributosActualizar) {
+  const entries = Object.entries(atributosActualizar)
+    .filter(([field]) => UPDATE_FIELDS.has(field));
+
+  if (entries.length === 0) {
+    throw new Error('No hay campos validos para actualizar Pedido_Cerveza.');
+  }
+
+  return {
+    clause: entries.map(([field]) => `${field} = ?`).join(', '),
+    values: entries.map(([, value]) => value)
+  };
+}
+
+async function getPedidoCerveza() {
+  const [rows] = await pool.query('SELECT * FROM Pedido_Cerveza');
   return rows;
 }
 
-// Consultar pedidos de cerveza por id de ambos
 async function getPedidoCervezaById(idPedido, idCerveza) {
   const [rows] = await pool.query(
     'SELECT * FROM Pedido_Cerveza WHERE IdPedido = ? AND IdCerveza = ?',
@@ -19,36 +30,30 @@ async function getPedidoCervezaById(idPedido, idCerveza) {
   return rows[0];
 }
 
-// Crear pedido_cerveza
-async function createPedidoCerveza(idPedido, idCerveza, cantidadLitros, precioUnitario) {
+async function createPedidoCerveza(idPedido, idCerveza, cantidadLitros, precioUnitarioAplicado) {
   const [result] = await pool.query(
-    'INSERT INTO Pedido_Cerveza (IdPedido, IdCerveza, CantidadLitros, PrecioUnitarioAplicado)' +
-    ' VALUES (?, ?, ?, ?)',
-    [idPedido, idCerveza, cantidadLitros, precioUnitario]
+    'INSERT INTO Pedido_Cerveza (IdPedido, IdCerveza, CantidadLitros, PrecioUnitarioAplicado) VALUES (?, ?, ?, ?)',
+    [idPedido, idCerveza, cantidadLitros, precioUnitarioAplicado]
   );
 
   return result.insertId;
 }
 
-// Actualizar pedido de cerveza
 async function updatePedidoCerveza(idPedido, idCerveza, atributosActualizar) {
-  const atributos = Object.keys(atributosActualizar);
-  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
-  const valores = atributos.map(campo => atributosActualizar[campo]);
+  const { clause, values } = buildUpdateClause(atributosActualizar);
+  values.push(idPedido, idCerveza);
 
-  const consulta = `UPDATE Pedido SET ${clausula} WHERE IdPedido = ? AND IdCerveza = ?`;
-  valores.push(idPedido);
-  valores.push(idCerveza);
-
-  const [result] = await pool.query(consulta, valores);
+  const [result] = await pool.query(
+    `UPDATE Pedido_Cerveza SET ${clause} WHERE IdPedido = ? AND IdCerveza = ?`,
+    values
+  );
 
   return result.affectedRows;
 }
 
-// Eliminar pedido de cerveza
 async function deletePedidoCerveza(idPedido, idCerveza) {
   const [result] = await pool.query(
-    'DELETE FROM Pedido WHERE IdPedido = ? AND IdCerveza = ?',
+    'DELETE FROM Pedido_Cerveza WHERE IdPedido = ? AND IdCerveza = ?',
     [idPedido, idCerveza]
   );
 

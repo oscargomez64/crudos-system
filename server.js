@@ -19,7 +19,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => {
-  res.send('API crudOS funcionando correctamente');
+  res.status(200).json({
+    success: true,
+    data: {
+      status: 'ok',
+      message: 'API crudOS funcionando correctamente'
+    }
+  });
 });
 
 app.use('/api/cliente', clienteRoutes);
@@ -32,14 +38,14 @@ app.use('/api/cerveza_ingrediente', cervezaIngredienteRoutes);
 
 async function testConnection() {
   try {
-    const [rows] = await pool.query('SELECT 1 + 1 as test');
-    console.log('Conexión a la base de datos establecida');
+    await pool.query('SELECT 1 + 1 AS test');
+    console.log('Conexion a la base de datos establecida');
   } catch (error) {
-    console.error('Error al conectar la base de datos: ', error.message);
+    console.error('Error al conectar la base de datos:', error.message);
   }
 }
 
-app.listen(PORT, async() => {
+app.listen(PORT, async () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
   await testConnection();
 });

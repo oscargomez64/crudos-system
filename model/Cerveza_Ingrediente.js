@@ -1,15 +1,26 @@
 const pool = require('../db/connect');
 
-// Consultar todos los ingredientes de cerveza
-async function getCervezaIngredientes() {
-  const [rows] = await pool.query(
-    'SELECT * FROM Cerveza_Ingrediente'
-  );
+const UPDATE_FIELDS = new Set(['CantidadRequerida']);
 
+function buildUpdateClause(atributosActualizar) {
+  const entries = Object.entries(atributosActualizar)
+    .filter(([field]) => UPDATE_FIELDS.has(field));
+
+  if (entries.length === 0) {
+    throw new Error('No hay campos validos para actualizar Cerveza_Ingrediente.');
+  }
+
+  return {
+    clause: entries.map(([field]) => `${field} = ?`).join(', '),
+    values: entries.map(([, value]) => value)
+  };
+}
+
+async function getCervezaIngredientes() {
+  const [rows] = await pool.query('SELECT * FROM Cerveza_Ingrediente');
   return rows;
 }
 
-// Consultar ingredientes de cerveza por id de ambos
 async function getCervezaIngredienteById(idCerveza, idIngrediente) {
   const [rows] = await pool.query(
     'SELECT * FROM Cerveza_Ingrediente WHERE IdCerveza = ? AND IdIngrediente = ?',
@@ -19,36 +30,30 @@ async function getCervezaIngredienteById(idCerveza, idIngrediente) {
   return rows[0];
 }
 
-// Crear cerveza_ingrediente
 async function createCervezaIngrediente(idCerveza, idIngrediente, cantidadRequerida) {
   const [result] = await pool.query(
-    'INSERT INTO Cerveza_Ingrediente (IdCerveza, IdIngrediente, CantidadRequerida) VALUES ' +
-    '(?, ?, ?)',
+    'INSERT INTO Cerveza_Ingrediente (IdCerveza, IdIngrediente, CantidadRequerida) VALUES (?, ?, ?)',
     [idCerveza, idIngrediente, cantidadRequerida]
   );
 
   return result.insertId;
 }
 
-// Actualizar ingredientes de cerveza
 async function updateCervezaIngrediente(idCerveza, idIngrediente, atributosActualizar) {
-  const atributos = Object.keys(atributosActualizar);
-  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
-  const valores = atributos.map(campo => atributosActualizar[campo]);
+  const { clause, values } = buildUpdateClause(atributosActualizar);
+  values.push(idCerveza, idIngrediente);
 
-  const consulta = `UPDATE Cerveza_Ingrediente SET ${clausula} WHERE IdCerveza = ? AND IdIngrediente = ?`;
-  valores.push(idCerveza);
-  valores.push(idIngrediente);
-
-  const [result] = await pool.query(consulta, valores);
+  const [result] = await pool.query(
+    `UPDATE Cerveza_Ingrediente SET ${clause} WHERE IdCerveza = ? AND IdIngrediente = ?`,
+    values
+  );
 
   return result.affectedRows;
 }
 
-// Eliminar ingredientes de cerveza
 async function deleteCervezaIngrediente(idCerveza, idIngrediente) {
   const [result] = await pool.query(
-    'DELETE FROM Pedido WHERE IdCerveza = ? AND IdIngrediente = ?',
+    'DELETE FROM Cerveza_Ingrediente WHERE IdCerveza = ? AND IdIngrediente = ?',
     [idCerveza, idIngrediente]
   );
 

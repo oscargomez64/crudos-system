@@ -1,15 +1,44 @@
 const pool = require('../db/connect');
 
-// Consultar todos los ingredientes
-async function getIngredientes() {
-  const [rows] = await pool.query(
-    'SELECT * FROM Ingrediente'
-  );
+const FIELD_MAP = {
+  idIngrediente: 'IdIngrediente',
+  nombre: 'Nombre',
+  unidadMedida: 'UnidadMedida',
+  stockActual: 'StockActual',
+  idProveedor: 'IdProveedor'
+};
 
+const UPDATE_FIELDS = new Set(['Nombre', 'UnidadMedida', 'StockActual', 'IdProveedor']);
+
+function buildSelectClause(campos) {
+  return campos.map((campo) => {
+    const column = FIELD_MAP[campo];
+    if (!column) {
+      throw new Error(`Campo no permitido: ${campo}`);
+    }
+    return `${column} AS ${campo}`;
+  }).join(', ');
+}
+
+function buildUpdateClause(atributosActualizar) {
+  const entries = Object.entries(atributosActualizar)
+    .filter(([field]) => UPDATE_FIELDS.has(field));
+
+  if (entries.length === 0) {
+    throw new Error('No hay campos validos para actualizar Ingrediente.');
+  }
+
+  return {
+    clause: entries.map(([field]) => `${field} = ?`).join(', '),
+    values: entries.map(([, value]) => value)
+  };
+}
+
+async function getIngredientes() {
+  const [rows] = await pool.query('SELECT * FROM Ingrediente');
   return rows;
 }
 
-// Consultar ingrediente por id
 async function getIngredienteById(id) {
   const [rows] = await pool.query(
     'SELECT * FROM Ingrediente WHERE IdIngrediente = ?',
@@ -19,54 +48,46 @@ async function getIngredienteById(id) {
   return rows[0];
 }
 
-// Proyectar campos ingrediente
 async function getIngredienteProyeccion(campos, filtros = {}) {
-  const clausula = campos.join(', ');
-
-  let consulta = `SELECT ${clausula} FROM Ingrediente WHERE 1=1`;
+  const clausula = buildSelectClause(campos);
   const params = [];
+  let consulta = `SELECT ${clausula} FROM Ingrediente WHERE 1=1`;
 
   if (filtros.stockMin !== undefined) {
-    consulta += ` AND StockActual >= ?`;
+    consulta += ' AND StockActual >= ?';
     params.push(filtros.stockMin);
   }
 
   if (filtros.stockMax !== undefined) {
-    consulta += ` AND StockActual <= ?`;
+    consulta += ' AND StockActual <= ?';
     params.push(filtros.stockMax);
   }
-
 
   const [result] = await pool.query(consulta, params);
   return result;
 }
 
-// Crear ingrediente
 async function createIngrediente(idIngrediente, nombre, unidad, stock, idProveedor) {
   const [result] = await pool.query(
-    'INSERT INTO Ingrediente (IdIngrediente, Nombre, UnidadMedida, StockActual, ' +
-    'IdProveedor) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO Ingrediente (IdIngrediente, Nombre, UnidadMedida, StockActual, IdProveedor) VALUES (?, ?, ?, ?, ?)',
     [idIngrediente, nombre, unidad, stock, idProveedor]
   );
 
   return result.insertId;
 }
 
-// Actualizar ingrediente
 async function updateIngrediente(id, atributosActualizar) {
-  const atributos = Object.keys(atributosActualizar);
-  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
-  const valores = atributos.map(campo => atributosActualizar[campo]);
+  const { clause, values } = buildUpdateClause(atributosActualizar);
+  values.push(id);
 
-  const consulta = `UPDATE Ingrediente SET ${clausula} WHERE IdIngrediente = ?`;
-  valores.push(id);
-
-  const [result] = await pool.query(consulta, valores);
+  const [result] = await pool.query(
+    `UPDATE Ingrediente SET ${clause} WHERE IdIngrediente = ?`,
+    values
+  );
 
   return result.affectedRows;
 }
 
-// Eliminar ingrediente
 async function deleteIngrediente(id) {
   const [result] = await pool.query(
     'DELETE FROM Ingrediente WHERE IdIngrediente = ?',

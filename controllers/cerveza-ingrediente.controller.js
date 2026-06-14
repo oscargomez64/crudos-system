@@ -1,154 +1,134 @@
 const CervezaIngredienteModel = require('../model/Cerveza_Ingrediente');
+const { isMissing, isValidId, parseRequiredNumber } = require('./helpers');
 
-// GET /api/cerveza_ingrediente/all
+function getCompositeIds(req) {
+  return {
+    idCerveza: req.query.idCerveza ?? req.body.idCerveza,
+    idIngrediente: req.query.idIngrediente ?? req.body.idIngrediente
+  };
+}
+
 const getCervezaIngredientes = async (req, res) => {
   try {
     const cervezaIngredientes = await CervezaIngredienteModel.getCervezaIngredientes();
-    res.json({
-      success: true,
-      cervezaIngredientes
-    });
+    res.status(200).json({ success: true, data: cervezaIngredientes });
   } catch (error) {
-    console.error('Error al obtener ingredientes de cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ingredientes de cerveza.'
-    });
+    console.error('Error al obtener relaciones cerveza-ingrediente:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener relaciones cerveza-ingrediente.' });
   }
-}
+};
 
-// GET /api/cerveza_ingrediente?idCerveza=x&idIngrediente=y
 const getCervezaIngredienteById = async (req, res) => {
   try {
-    const { idCerveza, idIngrediente } = req.query;
-    const cervezaIngrediente = await CervezaIngredienteModel.getCervezaIngredienteById(idCerveza, idIngrediente);
+    const { idCerveza, idIngrediente } = getCompositeIds(req);
 
-    if (!cervezaIngrediente) {
-      return res.status(404).json({
+    if (!isValidId(idCerveza) || !isValidId(idIngrediente)) {
+      return res.status(400).json({
         success: false,
-        message: 'Ingrediente de cerveza no encontrado'
+        message: 'idCerveza e idIngrediente son obligatorios y deben ser validos.'
       });
     }
 
-    res.json({
-      success: true,
-      cervezaIngrediente
-    });
-  } catch (error) {
-    console.error('Error al obtener ingrediente de cerveza por IDs: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ingrediente de cerveza por IDs.'
-    });
-  }
-}
+    const cervezaIngrediente = await CervezaIngredienteModel.getCervezaIngredienteById(idCerveza, idIngrediente);
 
-// POST /api/cerveza_ingrediente
+    if (!cervezaIngrediente) {
+      return res.status(404).json({ success: false, message: 'Relacion cerveza-ingrediente no encontrada.' });
+    }
+
+    res.status(200).json({ success: true, data: cervezaIngrediente });
+  } catch (error) {
+    console.error('Error al obtener relacion cerveza-ingrediente:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener relacion cerveza-ingrediente.' });
+  }
+};
+
 const createCervezaIngrediente = async (req, res) => {
   try {
     const { idCerveza, idIngrediente, cantidadRequerida } = req.body;
 
-    if (!idCerveza || !idIngrediente || !cantidadRequerida) {
+    if ([idCerveza, idIngrediente, cantidadRequerida].some(isMissing)) {
+      return res.status(400).json({ success: false, message: 'Faltan datos obligatorios.' });
+    }
+
+    if (!isValidId(idCerveza) || !isValidId(idIngrediente)) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan datos obligatorios'
+        message: 'idCerveza e idIngrediente deben ser validos.'
       });
     }
 
-    const insertId = await CervezaIngredienteModel.createCervezaIngrediente(idCerveza, idIngrediente, cantidadRequerida);
+    const cantidad = parseRequiredNumber(cantidadRequerida, 'cantidadRequerida');
+
+    await CervezaIngredienteModel.createCervezaIngrediente(idCerveza, idIngrediente, cantidad);
     res.status(201).json({
       success: true,
-      message: 'Se agregó relación de ingrediente cerveza',
-      insertId
+      message: 'Relacion cerveza-ingrediente creada correctamente.',
+      data: { idCerveza: Number(idCerveza), idIngrediente: Number(idIngrediente) }
     });
   } catch (error) {
-    console.error('Error al añadir relación de ingrediente cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al añadir relación de ingrediente cerveza'
-    });
+    console.error('Error al crear relacion cerveza-ingrediente:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al crear relacion cerveza-ingrediente.' });
   }
 };
 
-// PUT /api/cerveza_ingrediente?idCerveza=x&idIngrediente=y
 const updateCervezaIngrediente = async (req, res) => {
   try {
-    const { idCerveza, idIngrediente } = req.query;
+    const { idCerveza, idIngrediente } = getCompositeIds(req);
     const { cantidadRequerida } = req.body;
 
-    
-    if (!idCerveza || isNaN(idCerveza)) {
+    if (!isValidId(idCerveza) || !isValidId(idIngrediente)) {
       return res.status(400).json({
         success: false,
-        message: 'ID de cerveza no válida'
-      });
-    }
-    
-    if (!idIngrediente || isNaN(idIngrediente)) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID de ingrediente no válido'
+        message: 'idCerveza e idIngrediente son obligatorios y deben ser validos.'
       });
     }
 
     const atributos = {};
-    
-    if (cantidadRequerida !== undefined)
-      atributos.CantidadRequerida = cantidadRequerida;
+
+    if (!isMissing(cantidadRequerida)) {
+      atributos.CantidadRequerida = parseRequiredNumber(cantidadRequerida, 'cantidadRequerida');
+    }
 
     if (Object.keys(atributos).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No hay campos a actualizar'
-      });
+      return res.status(400).json({ success: false, message: 'No hay campos a actualizar.' });
     }
 
     const filas = await CervezaIngredienteModel.updateCervezaIngrediente(idCerveza, idIngrediente, atributos);
+
     if (filas === 0) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, message: 'Relacion cerveza-ingrediente no encontrada.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Relacion cerveza-ingrediente actualizada correctamente.' });
+  } catch (error) {
+    console.error('Error al actualizar relacion cerveza-ingrediente:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al actualizar relacion cerveza-ingrediente.' });
+  }
+};
+
+const deleteCervezaIngrediente = async (req, res) => {
+  try {
+    const { idCerveza, idIngrediente } = getCompositeIds(req);
+
+    if (!isValidId(idCerveza) || !isValidId(idIngrediente)) {
+      return res.status(400).json({
         success: false,
-        message: 'Relación cerveza ingrediente no encontrado'
+        message: 'idCerveza e idIngrediente son obligatorios y deben ser validos.'
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Relación cerveza ingrediente actualizado'
-    });
-  } catch (error) {
-    console.error('Error al actualizar datos de relación cerveza ingrediente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al actualizar datos de relación cerveza ingrediente'
-    });
-  }
-}
-
-// DELETE /api/cerveza_ingrediente?idCerveza=x&idIngrediente=y
-const deleteCervezaIngrediente = async (req, res) => {
-  try {
-    const { idCerveza, idIngrediente } = req.query;
     const filas = await CervezaIngredienteModel.deleteCervezaIngrediente(idCerveza, idIngrediente);
 
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Relación cerveza ingrediente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Relacion cerveza-ingrediente no encontrada.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Relación cerveza ingrediente eliminado'
-    });
+    res.status(200).json({ success: true, message: 'Relacion cerveza-ingrediente eliminada correctamente.' });
   } catch (error) {
-    console.error('Error al eliminar relación cerveza ingrediente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar relación cerveza ingrediente'
-    });
+    console.error('Error al eliminar relacion cerveza-ingrediente:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar relacion cerveza-ingrediente.' });
   }
-}
+};
 
 module.exports = {
   getCervezaIngredientes,

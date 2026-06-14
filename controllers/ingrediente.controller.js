@@ -1,214 +1,185 @@
 const IngredienteModel = require('../model/Ingrediente');
+const { isMissing, isValidId, parseOptionalNumber, parseRequiredNumber } = require('./helpers');
 
-// GET /api/ingrediente
+const CAMPOS_PERMITIDOS = ['idIngrediente', 'nombre', 'unidadMedida', 'stockActual', 'idProveedor'];
+
+function parseCampos(campos) {
+  return campos.split(',').map((field) => field.trim()).filter(Boolean);
+}
+
 const getIngredientes = async (req, res) => {
   try {
     const ingredientes = await IngredienteModel.getIngredientes();
-    res.json({
-      success: true,
-      ingredientes
-    });
+    res.status(200).json({ success: true, data: ingredientes });
   } catch (error) {
-    console.error('Error al obtener ingredientes: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ingredientes.'
-    });
+    console.error('Error al obtener ingredientes:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener ingredientes.' });
   }
-}
+};
 
-// GET /api/ingrediente/:id
 const getIngredienteById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de ingrediente no valido.' });
+    }
+
     const ingrediente = await IngredienteModel.getIngredienteById(id);
 
     if (!ingrediente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ingrediente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Ingrediente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      ingrediente
-    });
+    res.status(200).json({ success: true, data: ingrediente });
   } catch (error) {
-    console.error('Error al obtener ingrediente por ID: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ingrediente por ID.'
-    });
+    console.error('Error al obtener ingrediente por ID:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener ingrediente por ID.' });
   }
-}
+};
 
-// GET /api/ingrediente/project
 const getIngredienteProyeccion = async (req, res) => {
   try {
-    const { campos, stockMin, stockMax } = req.query;
+    const { campos } = req.query;
+    const stockMin = parseOptionalNumber(req.query.stockMin, 'stockMin');
+    const stockMax = parseOptionalNumber(req.query.stockMax, 'stockMax');
 
-    if (!campos) {
+    if (isMissing(campos)) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere de al menos un campo a proyectar'
+        message: 'Se requiere al menos un campo a proyectar.'
       });
     }
 
-    const camposPermitidos = ['idIngrediente', 'nombre', 'unidadMedida', 'stockActual', 'IdProveedor'];
-    const camposConsultados = campos.split(',').map(f => f.trim());
-
-    // Validar si existe dicho campo
-    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
-    if (camposNoValidos.length > 0) {
+    if (stockMin !== undefined && stockMax !== undefined && stockMin > stockMax) {
       return res.status(400).json({
         success: false,
-        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+        message: 'stockMin no puede ser mayor que stockMax.'
       });
     }
 
-    if (stockMin && stockMax && stockMin > stockMax) {
+    const camposConsultados = parseCampos(campos);
+    const camposNoValidos = camposConsultados.filter((field) => !CAMPOS_PERMITIDOS.includes(field));
+
+    if (camposConsultados.length === 0 || camposNoValidos.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'stockMin no puede ser mayor que stockMax'
+        message: `Campos no permitidos: ${camposNoValidos.join(', ') || campos}`
       });
     }
 
     const result = await IngredienteModel.getIngredienteProyeccion(
-      camposConsultados, { stockMin, stockMax }
+      camposConsultados,
+      { stockMin, stockMax }
     );
 
-    res.status(200).json({
-      success: true,
-      datos: result
-    });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('Error al obtener ingredientes: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener ingredientes'
-    });
+    console.error('Error al proyectar ingredientes:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al proyectar ingredientes.' });
   }
 };
 
-// POST /api/ingrediente
 const createIngrediente = async (req, res) => {
   try {
-    const { idIngrediente, nombre, unidad, stock, idProveedor } = req.body;
+    const { idIngrediente, nombre, unidad, unidadMedida, stock, stockActual, idProveedor } = req.body;
+    const unidadValue = unidadMedida ?? unidad;
+    const stockValue = stockActual ?? stock;
 
-    if (!idIngrediente || !nombre || !unidad || !stock || !idProveedor) {
+    if ([idIngrediente, nombre, unidadValue, stockValue, idProveedor].some(isMissing)) {
+      return res.status(400).json({ success: false, message: 'Faltan datos obligatorios.' });
+    }
+
+    if (!isValidId(idIngrediente) || !isValidId(idProveedor)) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan datos obligatorios'
+        message: 'ID de ingrediente o proveedor no valido.'
       });
     }
 
-    const insertId = await IngredienteModel.createIngrediente(idIngrediente, nombre, unidad, stock, idProveedor);
+    const stockNumber = parseRequiredNumber(stockValue, 'stockActual');
+
+    await IngredienteModel.createIngrediente(idIngrediente, nombre, unidadValue, stockNumber, idProveedor);
     res.status(201).json({
       success: true,
-      message: 'Se agregó el ingrediente',
-      insertId
+      message: 'Ingrediente creado correctamente.',
+      data: { idIngrediente: Number(idIngrediente) }
     });
   } catch (error) {
-    console.error('Error al añadir ingrediente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al añadir ingrediente'
-    });
+    console.error('Error al crear ingrediente:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al crear ingrediente.' });
   }
 };
 
-// PUT /api/ingrediente/:id
 const updateIngrediente = async (req, res) => {
   try {
-    const { idIngrediente } = req.params;
-    const { nombre, unidad, stock, idProveedor } = req.body;
+    const { id } = req.params;
+    const { nombre, unidad, unidadMedida, stock, stockActual, idProveedor } = req.body;
+    const unidadValue = unidadMedida ?? unidad;
+    const stockValue = stockActual ?? stock;
 
-    if (!idIngrediente || isNaN(idIngrediente)) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID de ingrediente no válido'
-      });
-    }
-
-    if (!idProveedor || isNaN(idProveedor)) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID de proveedor no válido'
-      });
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de ingrediente no valido.' });
     }
 
     const atributos = {};
 
-    if (nombre !== undefined) {
-      if (typeof nombre != 'string' || nombre.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          message: 'El nombre debe ser una cadena válida'
-        });
-      }
-      atributos.nombre = nombre;
+    if (!isMissing(nombre)) {
+      atributos.Nombre = nombre;
     }
 
-    if (unidad !== undefined)
-      atributos.UnidadMedida = unidad;
+    if (!isMissing(unidadValue)) {
+      atributos.UnidadMedida = unidadValue;
+    }
 
-    if (stock !== undefined)
-      atributos.StockActual = stock;
+    if (!isMissing(stockValue)) {
+      atributos.StockActual = parseRequiredNumber(stockValue, 'stockActual');
+    }
+
+    if (!isMissing(idProveedor)) {
+      if (!isValidId(idProveedor)) {
+        return res.status(400).json({ success: false, message: 'ID de proveedor no valido.' });
+      }
+      atributos.IdProveedor = idProveedor;
+    }
 
     if (Object.keys(atributos).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No hay campos a actualizar'
-      });
+      return res.status(400).json({ success: false, message: 'No hay campos a actualizar.' });
     }
 
     const filas = await IngredienteModel.updateIngrediente(id, atributos);
+
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ingrediente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Ingrediente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Ingrediente actualizado'
-    });
+    res.status(200).json({ success: true, message: 'Ingrediente actualizado correctamente.' });
   } catch (error) {
-    console.error('Error al actualizar datos del ingrediente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al actualizar datos del ingrediente'
-    });
+    console.error('Error al actualizar ingrediente:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al actualizar ingrediente.' });
   }
-}
+};
 
-// DELETE /api/ingrediente/:id
 const deleteIngrediente = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de ingrediente no valido.' });
+    }
+
     const filas = await IngredienteModel.deleteIngrediente(id);
 
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ingrediente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Ingrediente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Ingrediente eliminado'
-    });
+    res.status(200).json({ success: true, message: 'Ingrediente eliminado correctamente.' });
   } catch (error) {
-    console.error('Error al eliminar ingrediente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar ingrediente'
-    });
+    console.error('Error al eliminar ingrediente:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar ingrediente.' });
   }
-}
+};
 
 module.exports = {
   getIngredientes,

@@ -1,15 +1,43 @@
 const pool = require('../db/connect');
 
-// Consultar todos los proveedores
-async function getProveedores() {
-  const [rows] = await pool.query(
-    'SELECT * FROM Proveedor'
-  );
+const FIELD_MAP = {
+  idProveedor: 'IdProveedor',
+  nombre: 'Nombre',
+  telefono: 'Telefono',
+  ciudad: 'Ciudad'
+};
 
+const UPDATE_FIELDS = new Set(['Nombre', 'Telefono', 'Ciudad']);
+
+function buildSelectClause(campos) {
+  return campos.map((campo) => {
+    const column = FIELD_MAP[campo];
+    if (!column) {
+      throw new Error(`Campo no permitido: ${campo}`);
+    }
+    return `${column} AS ${campo}`;
+  }).join(', ');
+}
+
+function buildUpdateClause(atributosActualizar) {
+  const entries = Object.entries(atributosActualizar)
+    .filter(([field]) => UPDATE_FIELDS.has(field));
+
+  if (entries.length === 0) {
+    throw new Error('No hay campos validos para actualizar Proveedor.');
+  }
+
+  return {
+    clause: entries.map(([field]) => `${field} = ?`).join(', '),
+    values: entries.map(([, value]) => value)
+  };
+}
+
+async function getProveedores() {
+  const [rows] = await pool.query('SELECT * FROM Proveedor');
   return rows;
 }
 
-// Consultar proveedor por id
 async function getProveedorById(id) {
   const [rows] = await pool.query(
     'SELECT * FROM Proveedor WHERE IdProveedor = ?',
@@ -19,15 +47,13 @@ async function getProveedorById(id) {
   return rows[0];
 }
 
-// Proyectar campos proveedor
 async function getProveedoresProyeccion(campos, ciudad) {
-  const clausula = campos.join(', ');
-
-  let consulta = `SELECT ${clausula} FROM Proveedor`;
+  const clausula = buildSelectClause(campos);
   const params = [];
+  let consulta = `SELECT ${clausula} FROM Proveedor`;
 
   if (ciudad) {
-    consulta += ` WHERE Ciudad = ?`;
+    consulta += ' WHERE Ciudad = ?';
     params.push(ciudad);
   }
 
@@ -35,32 +61,27 @@ async function getProveedoresProyeccion(campos, ciudad) {
   return result;
 }
 
-// Crear proveedor
 async function createProveedor(id, nombre, telefono, ciudad) {
   const [result] = await pool.query(
-    'INSERT INTO Proveedor (IdProveedor, Nombre, Telefono, Ciudad) VALUES ' +
-    '(?, ?, ?, ?)',
+    'INSERT INTO Proveedor (IdProveedor, Nombre, Telefono, Ciudad) VALUES (?, ?, ?, ?)',
     [id, nombre, telefono, ciudad]
   );
 
   return result.insertId;
 }
 
-// Actualizar proveedor
 async function updateProveedor(id, atributosActualizar) {
-  const atributos = Object.keys(atributosActualizar);
-  const clausula = atributos.map(campo => `${campo} = ?`).join(', ');
-  const valores = atributos.map(campo => atributosActualizar[campo]);
+  const { clause, values } = buildUpdateClause(atributosActualizar);
+  values.push(id);
 
-  const consulta = `UPDATE Proveedor SET ${clausula} WHERE IdProveedor = ?`;
-  valores.push(id);
-
-  const [result] = await pool.query(consulta, valores);
+  const [result] = await pool.query(
+    `UPDATE Proveedor SET ${clause} WHERE IdProveedor = ?`,
+    values
+  );
 
   return result.affectedRows;
 }
 
-// Eliminar proveedor
 async function deleteProveedor(id) {
   const [result] = await pool.query(
     'DELETE FROM Proveedor WHERE IdProveedor = ?',

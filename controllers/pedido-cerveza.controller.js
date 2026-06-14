@@ -1,156 +1,141 @@
 const PedidoCervezaModel = require('../model/Pedido_Cerveza');
+const { isMissing, isValidId, parseRequiredNumber } = require('./helpers');
 
-// GET /api/pedido_cerveza/all
+function getCompositeIds(req) {
+  return {
+    idPedido: req.query.idPedido ?? req.body.idPedido,
+    idCerveza: req.query.idCerveza ?? req.body.idCerveza
+  };
+}
+
 const getPedidoCerveza = async (req, res) => {
   try {
     const pedidoCerveza = await PedidoCervezaModel.getPedidoCerveza();
-    res.json({
-      success: true,
-      pedidoCerveza
-    });
+    res.status(200).json({ success: true, data: pedidoCerveza });
   } catch (error) {
-    console.error('Error al obtener pedido de cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener pedido de cerveza.'
-    });
-  }
-}
-
-// GET /api/pedido_cerveza?idPedido=x&idCerveza=y
-const getPedidoCervezaById = async (req, res) => {
-  try {
-    const { idPedido, idCerveza } = req.query;
-    const pedidoCerveza = await PedidoCervezaModel.getPedidoCervezaById(idPedido, idCerveza);
-
-    if (!pedidoCerveza) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido no encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      pedidoCerveza
-    });
-  } catch (error) {
-    console.error('Error al obtener pedido de cerveza por IDs: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener pedido de cerveza por IDs.'
-    });
-  }
-}
-
-// POST /api/pedido_cerveza
-const createPedidoCerveza = async (req, res) => {
-  try {
-    const { idPedido, idCerveza, cantidadLitros, precioUnitario } = req.body;
-
-    if (!idPedido || !idCerveza || !cantidadLitros || !precioUnitario) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faltan datos obligatorios'
-      });
-    }
-
-    const insertId = await PedidoCervezaModel.createPedidoCerveza(idPedido, idCerveza, cantidadLitros, precioUnitario);
-    res.status(201).json({
-      success: true,
-      message: 'Se agregó el pedido de cerveza',
-      insertId
-    });
-  } catch (error) {
-    console.error('Error al añadir pedido de cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al añadir pedido de cerveza'
-    });
+    console.error('Error al obtener relaciones pedido-cerveza:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener relaciones pedido-cerveza.' });
   }
 };
 
-// PUT /api/pedido_cerveza?idPedido=x&idCerveza=y
-const updatePedidoCerveza = async (req, res) => {
+const getPedidoCervezaById = async (req, res) => {
   try {
-    const { idPedido, idCerveza } = req.query;
-    const { cantidadLitros, precioUnitario } = req.body;
+    const { idPedido, idCerveza } = getCompositeIds(req);
 
-    if (!idPedido || isNaN(idPedido)) {
+    if (!isValidId(idPedido) || !isValidId(idCerveza)) {
       return res.status(400).json({
         success: false,
-        message: 'ID de pedido no válido'
+        message: 'idPedido e idCerveza son obligatorios y deben ser validos.'
       });
     }
 
-    if (!idCerveza || isNaN(idCerveza)) {
+    const pedidoCerveza = await PedidoCervezaModel.getPedidoCervezaById(idPedido, idCerveza);
+
+    if (!pedidoCerveza) {
+      return res.status(404).json({ success: false, message: 'Relacion pedido-cerveza no encontrada.' });
+    }
+
+    res.status(200).json({ success: true, data: pedidoCerveza });
+  } catch (error) {
+    console.error('Error al obtener relacion pedido-cerveza:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener relacion pedido-cerveza.' });
+  }
+};
+
+const createPedidoCerveza = async (req, res) => {
+  try {
+    const { idPedido, idCerveza, cantidadLitros } = req.body;
+    const precioUnitarioAplicado = req.body.precioUnitarioAplicado ?? req.body.precioUnitario;
+
+    if ([idPedido, idCerveza, cantidadLitros, precioUnitarioAplicado].some(isMissing)) {
+      return res.status(400).json({ success: false, message: 'Faltan datos obligatorios.' });
+    }
+
+    if (!isValidId(idPedido) || !isValidId(idCerveza)) {
       return res.status(400).json({
         success: false,
-        message: 'ID de cerveza no válida'
+        message: 'idPedido e idCerveza deben ser validos.'
+      });
+    }
+
+    const cantidad = parseRequiredNumber(cantidadLitros, 'cantidadLitros');
+    const precio = parseRequiredNumber(precioUnitarioAplicado, 'precioUnitarioAplicado');
+
+    await PedidoCervezaModel.createPedidoCerveza(idPedido, idCerveza, cantidad, precio);
+    res.status(201).json({
+      success: true,
+      message: 'Relacion pedido-cerveza creada correctamente.',
+      data: { idPedido: Number(idPedido), idCerveza: Number(idCerveza) }
+    });
+  } catch (error) {
+    console.error('Error al crear relacion pedido-cerveza:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al crear relacion pedido-cerveza.' });
+  }
+};
+
+const updatePedidoCerveza = async (req, res) => {
+  try {
+    const { idPedido, idCerveza } = getCompositeIds(req);
+    const { cantidadLitros } = req.body;
+    const precioUnitarioAplicado = req.body.precioUnitarioAplicado ?? req.body.precioUnitario;
+
+    if (!isValidId(idPedido) || !isValidId(idCerveza)) {
+      return res.status(400).json({
+        success: false,
+        message: 'idPedido e idCerveza son obligatorios y deben ser validos.'
       });
     }
 
     const atributos = {};
 
-    if (cantidadLitros !== undefined)
-      atributos.CantidadLitros = cantidadLitros;
+    if (!isMissing(cantidadLitros)) {
+      atributos.CantidadLitros = parseRequiredNumber(cantidadLitros, 'cantidadLitros');
+    }
 
-    if (precioUnitario !== undefined)
-      atributos.PrecioUnitario = precioUnitario;
+    if (!isMissing(precioUnitarioAplicado)) {
+      atributos.PrecioUnitarioAplicado = parseRequiredNumber(precioUnitarioAplicado, 'precioUnitarioAplicado');
+    }
 
     if (Object.keys(atributos).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No hay campos a actualizar'
-      });
+      return res.status(400).json({ success: false, message: 'No hay campos a actualizar.' });
     }
 
     const filas = await PedidoCervezaModel.updatePedidoCerveza(idPedido, idCerveza, atributos);
+
     if (filas === 0) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, message: 'Relacion pedido-cerveza no encontrada.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Relacion pedido-cerveza actualizada correctamente.' });
+  } catch (error) {
+    console.error('Error al actualizar relacion pedido-cerveza:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error al actualizar relacion pedido-cerveza.' });
+  }
+};
+
+const deletePedidoCerveza = async (req, res) => {
+  try {
+    const { idPedido, idCerveza } = getCompositeIds(req);
+
+    if (!isValidId(idPedido) || !isValidId(idCerveza)) {
+      return res.status(400).json({
         success: false,
-        message: 'Pedido de cerveza no encontrado'
+        message: 'idPedido e idCerveza son obligatorios y deben ser validos.'
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Pedido de cerveza actualizado'
-    });
-  } catch (error) {
-    console.error('Error al actualizar datos del pedido de cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al actualizar datos del pedido de cerveza'
-    });
-  }
-}
-
-// DELETE /api/pedido_cerveza?idPedido=x&idCerveza=y
-const deletePedidoCerveza = async (req, res) => {
-  try {
-    const { idPedido, idCerveza } = req.query;
     const filas = await PedidoCervezaModel.deletePedidoCerveza(idPedido, idCerveza);
 
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido de cerveza no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Relacion pedido-cerveza no encontrada.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Pedido de cerveza eliminado'
-    });
+    res.status(200).json({ success: true, message: 'Relacion pedido-cerveza eliminada correctamente.' });
   } catch (error) {
-    console.error('Error al eliminar pedido de cerveza: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar pedido de cerveza'
-    });
+    console.error('Error al eliminar relacion pedido-cerveza:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar relacion pedido-cerveza.' });
   }
-}
+};
 
 module.exports = {
   getPedidoCerveza,

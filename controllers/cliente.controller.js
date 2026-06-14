@@ -1,217 +1,184 @@
 const ClienteModel = require('../model/Cliente');
+const { isMissing, isValidId } = require('./helpers');
 
-// GET /api/cliente
+const CAMPOS_PERMITIDOS = ['idCliente', 'nombre', 'rfc', 'ciudad', 'tipoCliente'];
+const TIPOS_VALIDOS = ['Mayorista', 'Minorista'];
+
+function parseCampos(campos) {
+  return campos.split(',').map((field) => field.trim()).filter(Boolean);
+}
+
 const getClientes = async (req, res) => {
   try {
     const clientes = await ClienteModel.getClientes();
-    res.json({
-      success: true,
-      clientes
-    });
+    res.status(200).json({ success: true, data: clientes });
   } catch (error) {
-    console.error('Error al obtener clientes: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener clientes.'
-    });
+    console.error('Error al obtener clientes:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener clientes.' });
   }
-}
+};
 
-// GET /api/cliente/:id
 const getClienteById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de cliente no valido.' });
+    }
+
     const cliente = await ClienteModel.getClienteById(id);
 
     if (!cliente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cliente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      cliente
-    });
+    res.status(200).json({ success: true, data: cliente });
   } catch (error) {
-    console.error('Error al obtener cliente por ID: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener cliente por ID.'
-    });
+    console.error('Error al obtener cliente por ID:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener cliente por ID.' });
   }
-}
+};
 
-// GET /api/cliente/project
 const getClientesProyeccion = async (req, res) => {
   try {
     const { campos, tipoCliente } = req.query;
 
-    if (!campos) {
+    if (isMissing(campos)) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere de al menos un campo a proyectar'
+        message: 'Se requiere al menos un campo a proyectar.'
       });
     }
 
-    const camposPermitidos = ['idCliente', 'nombre', 'rfc', 'ciudad', 'tipoCliente'];
-    const camposConsultados = campos.split(',').map(f => f.trim());
+    const camposConsultados = parseCampos(campos);
+    const camposNoValidos = camposConsultados.filter((field) => !CAMPOS_PERMITIDOS.includes(field));
 
-    // Validar si existe dicho campo
-    const camposNoValidos = camposConsultados.filter(f => !camposPermitidos.includes(f));
-    if (camposNoValidos.length > 0) {
+    if (camposConsultados.length === 0 || camposNoValidos.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Campos inválidos: ${camposNoValidos.join(', ')}`
+        message: `Campos no permitidos: ${camposNoValidos.join(', ') || campos}`
       });
     }
 
-    const tiposValidos = ['Mayorista', 'Minorista'];
-
-    if (tipoCliente && !tiposValidos.includes(tipoCliente)) {
+    if (!isMissing(tipoCliente) && !TIPOS_VALIDOS.includes(tipoCliente)) {
       return res.status(400).json({
         success: false,
-        message: 'Cliente debe ser tipo Mayorista O Minorista'
+        message: 'tipoCliente debe ser Mayorista o Minorista.'
       });
     }
 
     const result = await ClienteModel.getClientesProyeccion(camposConsultados, tipoCliente);
-
-    res.status(200).json({
-      success: true,
-      datos: result
-    });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('Error al obtener clientes: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener clientes'
-    });
+    console.error('Error al proyectar clientes:', error);
+    res.status(500).json({ success: false, message: 'Error al proyectar clientes.' });
   }
 };
 
-// POST /api/cliente
 const createCliente = async (req, res) => {
   try {
-    const { id, nombre, rfc, ciudad, tipo } = req.body;
+    const id = req.body.idCliente ?? req.body.id;
+    const tipoCliente = req.body.tipoCliente ?? req.body.tipo;
+    const { nombre, rfc, ciudad } = req.body;
 
-    if (!id || !nombre || !rfc || !ciudad || !tipo) {
+    if ([id, nombre, rfc, ciudad, tipoCliente].some(isMissing)) {
+      return res.status(400).json({ success: false, message: 'Faltan datos obligatorios.' });
+    }
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de cliente no valido.' });
+    }
+
+    if (!TIPOS_VALIDOS.includes(tipoCliente)) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan datos obligatorios'
+        message: 'tipoCliente debe ser Mayorista o Minorista.'
       });
     }
 
-    const insertId = await ClienteModel.createCliente(id, nombre, rfc, ciudad, tipo);
+    await ClienteModel.createCliente(id, nombre, rfc, ciudad, tipoCliente);
     res.status(201).json({
       success: true,
-      message: 'Se agregó el cliente',
-      insertId
+      message: 'Cliente creado correctamente.',
+      data: { idCliente: Number(id) }
     });
   } catch (error) {
-    console.error('Error al añadir cliente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al añadir cliente'
-    });
+    console.error('Error al crear cliente:', error);
+    res.status(500).json({ success: false, message: 'Error al crear cliente.' });
   }
 };
 
-// PUT /api/cliente/:id
 const updateCliente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, rfc, ciudad, tipoCliente } = req.body;
+    const tipoCliente = req.body.tipoCliente ?? req.body.tipo;
+    const { nombre, rfc, ciudad } = req.body;
 
-    if (!id || isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID no válido'
-      });
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de cliente no valido.' });
     }
 
     const atributos = {};
 
-    if (nombre !== undefined) {
-      if (typeof nombre != 'string' || nombre.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          message: 'El nombre debe ser una cadena válida'
-        });
-      }
-      atributos.nombre = nombre;
+    if (!isMissing(nombre)) {
+      atributos.Nombre = nombre;
     }
 
-    if (rfc !== undefined) {
-      if (!/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(rfc)) {
-        return res.status(400).json({
-          success: false,
-          message: 'RFC inválido'
-        });
-      }
-      atributos.rfc = rfc;
+    if (!isMissing(rfc)) {
+      atributos.RFC = rfc;
     }
 
-    if (ciudad !== undefined)
-      atributos.ciudad = ciudad;
+    if (!isMissing(ciudad)) {
+      atributos.Ciudad = ciudad;
+    }
 
-    if (tipoCliente !== undefined)
-      atributos.tipoCliente = tipoCliente;
+    if (!isMissing(tipoCliente)) {
+      if (!TIPOS_VALIDOS.includes(tipoCliente)) {
+        return res.status(400).json({
+          success: false,
+          message: 'tipoCliente debe ser Mayorista o Minorista.'
+        });
+      }
+      atributos.TipoCliente = tipoCliente;
+    }
 
     if (Object.keys(atributos).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No hay campos a actualizar'
-      });
+      return res.status(400).json({ success: false, message: 'No hay campos a actualizar.' });
     }
 
     const filas = await ClienteModel.updateCliente(id, atributos);
+
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cliente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Cliente actualizado'
-    });
+    res.status(200).json({ success: true, message: 'Cliente actualizado correctamente.' });
   } catch (error) {
-    console.error('Error al actualizar datos del cliente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al actualizar datos del cliente'
-    });
+    console.error('Error al actualizar cliente:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar cliente.' });
   }
-}
+};
 
-// DELETE /api/cliente/:id
 const deleteCliente = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: 'ID de cliente no valido.' });
+    }
+
     const filas = await ClienteModel.deleteCliente(id);
 
     if (filas === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cliente no encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado.' });
     }
 
-    res.json({
-      success: true,
-      message: 'Cliente eliminado'
-    });
+    res.status(200).json({ success: true, message: 'Cliente eliminado correctamente.' });
   } catch (error) {
-    console.error('Error al eliminar cliente: ', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al eliminar cliente'
-    });
+    console.error('Error al eliminar cliente:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar cliente.' });
   }
-}
+};
 
 module.exports = {
   getClientes,
