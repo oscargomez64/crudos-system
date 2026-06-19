@@ -1,7 +1,8 @@
 .hero-panel,
 .module-header,
 .entity-form,
-.table-section {
+.table-section,
+.consulta-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -127,6 +128,10 @@
 .quick-card small {
   color: var(--muted);
   line-height: 1.45;
+}
+
+.query-card svg {
+  color: var(--blue);
 }
 
 .module-header {
@@ -289,6 +294,44 @@
 
 .table-section {
   overflow: hidden;
+}
+
+.consultas-list {
+  display: grid;
+  gap: 18px;
+}
+
+.consulta-card {
+  overflow: hidden;
+}
+
+.consulta-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.consulta-card-header h3 {
+  font-size: 18px;
+  font-weight: 680;
+}
+
+.consulta-card-header p {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.query-idle {
+  display: flex;
+  align-items: center;
+  min-height: 86px;
+  padding: 0 18px;
+  color: var(--muted);
+  background: #ffffff;
 }
 
 .table-toolbar {
@@ -463,7 +506,8 @@ tbody tr:hover {
 
   .module-actions,
   .form-actions,
-  .dialog-actions {
+  .dialog-actions,
+  .consulta-card-header {
     justify-content: stretch;
   }
 
@@ -471,6 +515,10 @@ tbody tr:hover {
   .form-actions button,
   .dialog-actions button {
     flex: 1 1 0;
+  }
+
+  .consulta-card-header {
+    grid-template-columns: 1fr;
   }
 
   .table-toolbar {

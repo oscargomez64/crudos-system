@@ -59,6 +59,15 @@
   background: var(--line);
 }
 
+.nav-label {
+  padding: 8px 12px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -110,6 +119,10 @@
   }
 
   .nav-divider {
+    display: none;
+  }
+
+  .nav-label {
     display: none;
   }
 

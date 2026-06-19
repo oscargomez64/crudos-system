@@ -10,7 +10,7 @@ Interfaz CRUD en Vite + React para administrar la base `LaEspumaDorada` consumie
 ## Instalacion
 
 ```bash
-cd frontend
+cd front
 npm install
 ```
 
@@ -42,6 +42,10 @@ npm run build
 
 ## Modulos incluidos
 
+- Consultas sencillas
+- Consultas con campos agrupados
+- Consultas con HAVING
+- Consultas multitabla
 - Clientes
 - Cervezas
 - Proveedores

@@ -32,6 +32,16 @@ function normalizePayload(payload) {
     };
   }
 
+  if (payload && typeof payload === 'object' && 'ok' in payload) {
+    return {
+      success: payload.ok,
+      data: payload.data ?? [],
+      message: payload.message,
+      consulta: payload.consulta,
+      error: payload.error
+    };
+  }
+
   return {
     success: true,
     data: payload,

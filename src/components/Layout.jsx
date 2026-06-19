@@ -1,5 +1,5 @@
 import { Database } from 'lucide-react';
-import Sidebar from './Sidebar.jsx';
+import Navbar from './Navbar.jsx';
 
 export default function Layout({ activeKey, onNavigate, entities, children }) {
   return (
@@ -15,7 +15,7 @@ export default function Layout({ activeKey, onNavigate, entities, children }) {
       </header>
 
       <div className="workspace">
-        <Sidebar activeKey={activeKey} onNavigate={onNavigate} entities={entities} />
+        <Navbar activeKey={activeKey} onNavigate={onNavigate} entities={entities} />
         <main className="content-area">{children}</main>
       </div>
     </div>

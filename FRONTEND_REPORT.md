@@ -10,52 +10,59 @@
 
 ## Archivos creados
 
-- `frontend/package.json`
-- `frontend/index.html`
-- `frontend/vite.config.js`
-- `frontend/.env.example`
-- `frontend/.gitignore`
-- `frontend/README.md`
-- `frontend/FRONTEND_REPORT.md`
-- `frontend/src/main.jsx`
-- `frontend/src/App.jsx`
-- `frontend/src/api/client.js`
-- `frontend/src/api/resources.js`
-- `frontend/src/config/entities.js`
-- `frontend/src/components/Layout.jsx`
-- `frontend/src/components/Sidebar.jsx`
-- `frontend/src/components/DataTable.jsx`
-- `frontend/src/components/EntityForm.jsx`
-- `frontend/src/components/ConfirmDialog.jsx`
-- `frontend/src/components/Toast.jsx`
-- `frontend/src/components/StatusBadge.jsx`
-- `frontend/src/components/LoadingState.jsx`
-- `frontend/src/components/EmptyState.jsx`
-- `frontend/src/pages/Dashboard.jsx`
-- `frontend/src/pages/EntityCrudPage.jsx`
-- `frontend/src/styles/global.css`
-- `frontend/src/styles/layout.css`
-- `frontend/src/styles/components.css`
+- `front/package.json`
+- `front/index.html`
+- `front/vite.config.js`
+- `front/.env.example`
+- `front/README.md`
+- `front/FRONTEND_REPORT.md`
+- `front/src/main.jsx`
+- `front/src/App.jsx`
+- `front/src/api/client.js`
+- `front/src/api/resources.js`
+- `front/src/api/consultasApi.js`
+- `front/src/config/entities.js`
+- `front/src/components/Layout.jsx`
+- `front/src/components/Navbar.jsx`
+- `front/src/components/DataTable.jsx`
+- `front/src/components/ConsultaCard.jsx`
+- `front/src/components/TablaResultados.jsx`
+- `front/src/components/EntityForm.jsx`
+- `front/src/components/ConfirmDialog.jsx`
+- `front/src/components/Toast.jsx`
+- `front/src/components/StatusBadge.jsx`
+- `front/src/components/LoadingState.jsx`
+- `front/src/components/EmptyState.jsx`
+- `front/src/pages/Home.jsx`
+- `front/src/pages/ConsultasSencillas.jsx`
+- `front/src/pages/ConsultasAgrupadas.jsx`
+- `front/src/pages/ConsultasHaving.jsx`
+- `front/src/pages/ConsultasMultitabla.jsx`
+- `front/src/pages/EntityCrudPage.jsx`
+- `front/src/styles/global.css`
+- `front/src/styles/layout.css`
+- `front/src/styles/components.css`
 
 ## Como instalar
 
 ```bash
-cd frontend
+cd front
 npm install
 ```
 
 ## Como ejecutar
 
-Primero levanta el backend desde la raiz del proyecto:
+Primero levanta el backend:
 
 ```bash
+cd back
 npm start
 ```
 
 Luego inicia el frontend:
 
 ```bash
-cd frontend
+cd front
 npm run dev
 ```
 
@@ -67,7 +74,7 @@ El frontend usa:
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-Todas las llamadas HTTP se centralizan en `frontend/src/api/client.js`.
+Todas las llamadas HTTP se centralizan en `front/src/api/client.js` y `front/src/api/consultasApi.js`.
 
 ## Modulos CRUD incluidos
 
