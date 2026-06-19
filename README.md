@@ -19,7 +19,7 @@ npm install
 
 ## Variables de entorno
 
-Crea un archivo `.env` basado en `/.env-example`:
+Crea un archivo `.env` basado en `.env.example`:
 
 ```env
 PORT=3000
@@ -91,6 +91,7 @@ Respuesta esperada:
 - `/api/pedido`
 - `/api/pedido_cerveza`
 - `/api/cerveza_ingrediente`
+- `/api/consultas`
 
 Cada recurso expone operaciones CRUD segun su ruta. Las relaciones compuestas usan query params para sus llaves, por ejemplo:
 
